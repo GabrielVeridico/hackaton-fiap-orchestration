@@ -1,0 +1,12 @@
+# Variáveis locais (segredos do compose) — nunca commitar
+.env
+*.local
+**/secrets/*.local.*
+
+# Helm
+charts/*.tgz
+helm/**/charts/
+
+# Sistema
+.DS_Store
+Thumbs.db
