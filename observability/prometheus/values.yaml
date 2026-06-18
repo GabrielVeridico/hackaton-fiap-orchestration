@@ -1,0 +1,47 @@
+# Values para o chart kube-prometheus-stack (Prometheus Operator + Grafana + Alertmanager).
+#
+# Instalação:
+#   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+#   helm repo update
+#   kubectl create namespace observability
+#   helm upgrade --install kube-prometheus-stack \
+#     prometheus-community/kube-prometheus-stack \
+#     -n observability -f observability/prometheus/values.yaml
+#
+# Os serviços expõem /metrics (OpenTelemetry). O chart conexao-service cria um
+# ServiceMonitor quando metrics.serviceMonitor.enabled=true (label release=kube-prometheus-stack).
+
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    # Descobre ServiceMonitors em qualquer namespace (não só os do release).
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+grafana:
+  enabled: true
+  # Troque por um Secret em produção (RNF21). Placeholder para bootstrap.
+  adminPassword: "change-me"
+  defaultDashboardsEnabled: true
+  sidecar:
+    dashboards:
+      enabled: true
+      # Importa dashboards de ConfigMaps com este label em qualquer namespace.
+      label: grafana_dashboard
+      searchNamespace: ALL
+
+alertmanager:
+  enabled: true
+
+# Métricas de nó/kubelet/cadvisor já vêm habilitadas por padrão no stack.
+nodeExporter:
+  enabled: true
+kubeStateMetrics:
+  enabled: true
