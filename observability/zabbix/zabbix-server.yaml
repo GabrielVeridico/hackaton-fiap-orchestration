@@ -1,0 +1,174 @@
+# Zabbix server + backing PostgreSQL + frontend web, no namespace `observability`.
+# Camada complementar (infra/host + disponibilidade + alertas) — ver ADR-002.
+#
+# Aplicar:
+#   kubectl create namespace observability   # se ainda não existir
+#   kubectl apply -f observability/zabbix/zabbix-server.yaml
+#
+# Em produção, troque as senhas por Secrets reais (RNF21). Aqui ficam inline só
+# para bootstrap do ambiente de demonstração.
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: zabbix-db
+  namespace: observability
+type: Opaque
+stringData:
+  POSTGRES_USER: zabbix
+  POSTGRES_PASSWORD: zabbix-change-me
+  POSTGRES_DB: zabbix
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zabbix-postgres
+  namespace: observability
+  labels:
+    app: zabbix-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zabbix-postgres
+  template:
+    metadata:
+      labels:
+        app: zabbix-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          envFrom:
+            - secretRef:
+                name: zabbix-db
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: pgdata
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zabbix-postgres
+  namespace: observability
+spec:
+  selector:
+    app: zabbix-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zabbix-server
+  namespace: observability
+  labels:
+    app: zabbix-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zabbix-server
+  template:
+    metadata:
+      labels:
+        app: zabbix-server
+    spec:
+      containers:
+        - name: zabbix-server
+          image: zabbix/zabbix-server-pgsql:alpine-6.4-latest
+          env:
+            - name: DB_SERVER_HOST
+              value: zabbix-postgres
+          envFrom:
+            - secretRef:
+                name: zabbix-db
+          ports:
+            - containerPort: 10051
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zabbix-server
+  namespace: observability
+spec:
+  selector:
+    app: zabbix-server
+  ports:
+    - name: trapper
+      port: 10051
+      targetPort: 10051
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zabbix-web
+  namespace: observability
+  labels:
+    app: zabbix-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zabbix-web
+  template:
+    metadata:
+      labels:
+        app: zabbix-web
+    spec:
+      containers:
+        - name: zabbix-web
+          image: zabbix/zabbix-web-nginx-pgsql:alpine-6.4-latest
+          env:
+            - name: DB_SERVER_HOST
+              value: zabbix-postgres
+            - name: ZBX_SERVER_HOST
+              value: zabbix-server
+            - name: PHP_TZ
+              value: America/Sao_Paulo
+          envFrom:
+            - secretRef:
+                name: zabbix-db
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 384Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zabbix-web
+  namespace: observability
+spec:
+  type: ClusterIP
+  selector:
+    app: zabbix-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080

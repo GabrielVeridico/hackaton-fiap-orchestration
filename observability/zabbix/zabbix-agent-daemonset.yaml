@@ -1,0 +1,73 @@
+# Zabbix Agent 2 como DaemonSet — coleta de host/nó (CPU, memória, disco) em
+# cada nó do AKS (RNF27). Reporta ativamente ao zabbix-server.
+#
+# Aplicar:
+#   kubectl apply -f observability/zabbix/zabbix-agent-daemonset.yaml
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: zabbix-agent
+  namespace: observability
+  labels:
+    app: zabbix-agent
+spec:
+  selector:
+    matchLabels:
+      app: zabbix-agent
+  template:
+    metadata:
+      labels:
+        app: zabbix-agent
+    spec:
+      hostNetwork: true
+      hostPID: true
+      tolerations:
+        - effect: NoSchedule
+          operator: Exists
+      containers:
+        - name: zabbix-agent2
+          image: zabbix/zabbix-agent2:alpine-6.4-latest
+          env:
+            - name: ZBX_SERVER_HOST
+              value: zabbix-server.observability.svc.cluster.local
+            - name: ZBX_HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: ZBX_PASSIVE_ALLOW
+              value: "true"
+            - name: ZBX_ACTIVE_ALLOW
+              value: "true"
+          ports:
+            - containerPort: 10050
+              hostPort: 10050
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: proc
+              mountPath: /host/proc
+              readOnly: true
+            - name: sys
+              mountPath: /host/sys
+              readOnly: true
+            - name: root
+              mountPath: /host/root
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      volumes:
+        - name: proc
+          hostPath:
+            path: /proc
+        - name: sys
+          hostPath:
+            path: /sys
+        - name: root
+          hostPath:
+            path: /
