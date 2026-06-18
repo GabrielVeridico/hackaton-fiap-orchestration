@@ -1,23 +1,17 @@
 # Zabbix server + backing PostgreSQL + frontend web, no namespace `observability`.
 # Camada complementar (infra/host + disponibilidade + alertas) — ver ADR-002.
 #
-# Aplicar:
-#   kubectl create namespace observability   # se ainda não existir
+# IMPORTANTE: o Secret `zabbix-db` NÃO é versionado (sem credenciais no git — RNF21).
+# Crie-o fora do repositório ANTES de aplicar estes manifestos:
+#
+#   kubectl create namespace observability
+#   kubectl -n observability create secret generic zabbix-db \
+#     --from-literal=POSTGRES_USER=zabbix \
+#     --from-literal=POSTGRES_PASSWORD="$(openssl rand -base64 24)" \
+#     --from-literal=POSTGRES_DB=zabbix
 #   kubectl apply -f observability/zabbix/zabbix-server.yaml
 #
-# Em produção, troque as senhas por Secrets reais (RNF21). Aqui ficam inline só
-# para bootstrap do ambiente de demonstração.
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: zabbix-db
-  namespace: observability
-type: Opaque
-stringData:
-  POSTGRES_USER: zabbix
-  POSTGRES_PASSWORD: zabbix-change-me
-  POSTGRES_DB: zabbix
+# Em produção, prefira External Secrets Operator / SealedSecrets / Azure Key Vault CSI.
 ---
 apiVersion: apps/v1
 kind: Deployment

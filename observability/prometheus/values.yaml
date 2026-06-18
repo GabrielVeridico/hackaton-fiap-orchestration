@@ -14,9 +14,9 @@
 prometheus:
   prometheusSpec:
     retention: 7d
-    # Descobre ServiceMonitors em qualquer namespace (não só os do release).
-    serviceMonitorSelectorNilUsesHelmValues: false
-    podMonitorSelectorNilUsesHelmValues: false
+    # Mantém o default (descobre apenas objetos rotulados release=kube-prometheus-stack).
+    # O chart conexao-service já aplica esse label no ServiceMonitor — nada de
+    # descoberta cluster-wide irrestrita.
     resources:
       requests:
         cpu: 100m
@@ -27,15 +27,18 @@ prometheus:
 
 grafana:
   enabled: true
-  # Troque por um Secret em produção (RNF21). Placeholder para bootstrap.
-  adminPassword: "change-me"
+  # Sem senha inline (RNF21): o chart gera uma senha aleatória no Secret do Grafana.
+  # Recupere com:
+  #   kubectl -n observability get secret kube-prometheus-stack-grafana \
+  #     -o jsonpath="{.data.admin-password}" | base64 -d
+  # Em produção, aponte para um Secret externo via admin.existingSecret.
   defaultDashboardsEnabled: true
   sidecar:
     dashboards:
       enabled: true
-      # Importa dashboards de ConfigMaps com este label em qualquer namespace.
+      # Importa dashboards de ConfigMaps com este label, apenas no namespace observability.
       label: grafana_dashboard
-      searchNamespace: ALL
+      searchNamespace: observability
 
 alertmanager:
   enabled: true

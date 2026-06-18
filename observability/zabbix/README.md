@@ -13,15 +13,23 @@ operacionais. Decisão registrada como **ADR-002**.
 
 ```bash
 kubectl create namespace observability   # se ainda não existir
+
+# Secret do Postgres do Zabbix — criado FORA do git (sem credenciais versionadas, RNF21):
+kubectl -n observability create secret generic zabbix-db \
+  --from-literal=POSTGRES_USER=zabbix \
+  --from-literal=POSTGRES_PASSWORD="$(openssl rand -base64 24)" \
+  --from-literal=POSTGRES_DB=zabbix
+
 kubectl apply -f observability/zabbix/zabbix-server.yaml
 kubectl apply -f observability/zabbix/zabbix-agent-daemonset.yaml
 # acesso ao frontend (porta-forward):
 kubectl -n observability port-forward svc/zabbix-web 8888:80
-# UI em http://localhost:8888 (login inicial: Admin / zabbix)
+# UI em http://localhost:8888 (login inicial: Admin / zabbix — troque na primeira entrada)
 ```
 
-> Troque as senhas inline (`Secret zabbix-db`, login `Admin`) por valores reais antes de qualquer
-> uso fora de demonstração (RNF21).
+> Nenhuma credencial é versionada. O `zabbix-db` é criado via `kubectl create secret` (acima); em
+> produção, prefira External Secrets Operator / SealedSecrets / Azure Key Vault CSI (RNF21). Troque a
+> senha padrão do login `Admin` do frontend no primeiro acesso.
 
 ## Configuração na UI/API do Zabbix
 

@@ -1,5 +1,9 @@
 # Zabbix Agent 2 como DaemonSet — coleta de host/nó (CPU, memória, disco) em
-# cada nó do AKS (RNF27). Reporta ativamente ao zabbix-server.
+# cada nó do AKS (RNF27). Opera em modo ATIVO: o agent inicia a conexão com o
+# zabbix-server (não escuta exposto na rede do host).
+#
+# Endurecimento (least-privilege): sem privileged, sem hostNetwork/hostPID, sem
+# mount do root do host. Lê métricas só de /proc e /sys (read-only).
 #
 # Aplicar:
 #   kubectl apply -f observability/zabbix/zabbix-agent-daemonset.yaml
@@ -20,39 +24,44 @@ spec:
       labels:
         app: zabbix-agent
     spec:
-      hostNetwork: true
-      hostPID: true
+      # Não agenda em nós control-plane (toleração restrita aos nós de workload).
       tolerations:
-        - effect: NoSchedule
+        - key: node-role.kubernetes.io/control-plane
           operator: Exists
+          effect: NoSchedule
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1997          # uid do usuário zabbix na imagem oficial
+        fsGroup: 1997
       containers:
         - name: zabbix-agent2
+          # Pino por tag de release (substitua por digest sha256 em produção).
           image: zabbix/zabbix-agent2:alpine-6.4-latest
           env:
+            # Modo ATIVO: agent conecta no server; sem checks passivos expostos.
             - name: ZBX_SERVER_HOST
               value: zabbix-server.observability.svc.cluster.local
+            - name: ZBX_PASSIVE_ALLOW
+              value: "false"
+            - name: ZBX_ACTIVE_ALLOW
+              value: "true"
             - name: ZBX_HOSTNAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            - name: ZBX_PASSIVE_ALLOW
-              value: "true"
-            - name: ZBX_ACTIVE_ALLOW
-              value: "true"
-          ports:
-            - containerPort: 10050
-              hostPort: 10050
           securityContext:
-            privileged: true
+            privileged: false
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
           volumeMounts:
             - name: proc
               mountPath: /host/proc
               readOnly: true
             - name: sys
               mountPath: /host/sys
-              readOnly: true
-            - name: root
-              mountPath: /host/root
               readOnly: true
           resources:
             requests:
@@ -68,6 +77,3 @@ spec:
         - name: sys
           hostPath:
             path: /sys
-        - name: root
-          hostPath:
-            path: /
