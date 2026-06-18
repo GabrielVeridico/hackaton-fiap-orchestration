@@ -1,0 +1,25 @@
+# PaymentAPI — gateway mock. Consome donation-requested, publica payment-result.
+nameOverride: hackatonfiap-payments
+
+image:
+  repository: hackatonfiap-payments
+
+config:
+  Jwt__Issuer: conexaosolidaria.local
+  Jwt__Audience: conexaosolidaria.clients
+  ServiceBus__RequestTopic: donation-requested
+  ServiceBus__Subscription: payments
+  ServiceBus__ResultTopic: payment-result
+
+secrets:
+  ConnectionStrings__Default: ""
+  Jwt__Key: ""
+  ServiceBus__ConnectionString: ""
+
+keyVaultObjects:
+  - objectName: Payments-ConnectionString
+    key: ConnectionStrings__Default
+  - objectName: Jwt-Key
+    key: Jwt__Key
+  - objectName: ServiceBus-ConnectionString
+    key: ServiceBus__ConnectionString

@@ -1,0 +1,30 @@
+# DonationAPI — campanhas/doações/consumer + projeção Cosmos (read store).
+nameOverride: hackatonfiap-donations
+
+image:
+  repository: hackatonfiap-donations
+
+config:
+  Jwt__Issuer: conexaosolidaria.local
+  Jwt__Audience: conexaosolidaria.clients
+  ServiceBus__RequestTopic: donation-requested
+  ServiceBus__ResultTopic: payment-result
+  ServiceBus__ResultSubscription: donations
+  Cosmos__Database: HackatonFiapDonations
+  Cosmos__Container: campaigns
+
+secrets:
+  ConnectionStrings__Default: ""
+  Jwt__Key: ""
+  ServiceBus__ConnectionString: ""
+  Cosmos__ConnectionString: ""
+
+keyVaultObjects:
+  - objectName: Donations-ConnectionString
+    key: ConnectionStrings__Default
+  - objectName: Jwt-Key
+    key: Jwt__Key
+  - objectName: ServiceBus-ConnectionString
+    key: ServiceBus__ConnectionString
+  - objectName: Cosmos-ConnectionString
+    key: Cosmos__ConnectionString

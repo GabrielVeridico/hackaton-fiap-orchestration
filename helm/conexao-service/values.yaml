@@ -1,0 +1,74 @@
+# Defaults comuns às 3 APIs. Sobrescreva por serviço com values-<svc>.yaml.
+
+nameOverride: ""
+namespace: conexao-solidaria
+replicaCount: 1
+
+image:
+  registry: "<acr>.azurecr.io"   # ex.: meuacr.azurecr.io (parametrize no deploy)
+  repository: ""                 # ex.: hackatonfiap-users
+  tag: latest
+  pullPolicy: Always
+
+imagePullSecrets:
+  - name: acr-secret
+
+service:
+  port: 8080
+
+env:
+  ASPNETCORE_ENVIRONMENT: Production
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 96Mi
+  limits:
+    cpu: 500m
+    memory: 384Mi
+
+probes:
+  liveness:
+    path: /health
+    initialDelaySeconds: 60
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 6
+  readiness:
+    path: /ready
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: 70
+
+serviceAccount:
+  create: true
+  workloadIdentity: false
+
+# Quando keyVault.enabled=true, os segredos vêm do Azure Key Vault via CSI
+# (SecretProviderClass) em vez do Secret templado. Mantém o padrão do donations.
+keyVault:
+  enabled: false
+  clientID: ""
+  tenantId: ""
+  name: ""
+
+metrics:
+  scrapeAnnotations: true
+  serviceMonitor:
+    enabled: false
+
+# Config NÃO-secreta -> ConfigMap (por serviço).
+config: {}
+
+# Segredos -> Secret quando keyVault.enabled=false (por serviço).
+secrets: {}
+
+# Mapeamento objectName(Key Vault) -> chave do Secret, usado quando keyVault.enabled=true.
+keyVaultObjects: []

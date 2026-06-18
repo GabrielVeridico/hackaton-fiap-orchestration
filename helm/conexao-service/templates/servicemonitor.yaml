@@ -1,0 +1,18 @@
+{{- if .Values.metrics.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "conexao-service.name" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    release: kube-prometheus-stack
+    {{- include "conexao-service.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "conexao-service.name" . }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+{{- end }}

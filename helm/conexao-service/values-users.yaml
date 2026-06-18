@@ -1,0 +1,23 @@
+# UserAPI — auth/JWT. NÃO usa Service Bus nem Cosmos (bounded context isolado).
+nameOverride: hackatonfiap-users
+
+image:
+  repository: hackatonfiap-users
+
+config:
+  Jwt__Issuer: conexaosolidaria.local
+  Jwt__Audience: conexaosolidaria.clients
+
+# Preencha no deploy (ou via Key Vault). NÃO commite valores reais.
+secrets:
+  ConnectionStrings__Default: ""
+  Jwt__Key: ""
+  Owner__Password: ""
+
+keyVaultObjects:
+  - objectName: Users-ConnectionString
+    key: ConnectionStrings__Default
+  - objectName: Jwt-Key
+    key: Jwt__Key
+  - objectName: Owner-Password
+    key: Owner__Password

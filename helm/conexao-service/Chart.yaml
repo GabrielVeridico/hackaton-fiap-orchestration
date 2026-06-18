@@ -1,0 +1,6 @@
+apiVersion: v2
+name: conexao-service
+description: Chart reutilizável para as APIs do Conexão Solidária (users/payments/donations)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
