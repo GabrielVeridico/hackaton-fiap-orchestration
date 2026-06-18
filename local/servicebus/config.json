@@ -1,0 +1,51 @@
+{
+  "UserConfig": {
+    "Namespaces": [
+      {
+        "Name": "sbemulatorns",
+        "Topics": [
+          {
+            "Name": "donation-requested",
+            "Properties": {
+              "DefaultMessageTimeToLive": "PT1H"
+            },
+            "Subscriptions": [
+              {
+                "Name": "payments",
+                "Properties": {
+                  "MaxDeliveryCount": 3,
+                  "DeadLetteringOnMessageExpiration": true
+                }
+              }
+            ]
+          },
+          {
+            "Name": "payment-result",
+            "Properties": {
+              "DefaultMessageTimeToLive": "PT1H"
+            },
+            "Subscriptions": [
+              {
+                "Name": "donations",
+                "Properties": {
+                  "MaxDeliveryCount": 3,
+                  "DeadLetteringOnMessageExpiration": true
+                }
+              },
+              {
+                "Name": "notifications",
+                "Properties": {
+                  "MaxDeliveryCount": 3,
+                  "DeadLetteringOnMessageExpiration": true
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "Logging": {
+      "Type": "File"
+    }
+  }
+}

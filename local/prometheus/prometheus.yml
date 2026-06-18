@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: users-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["users-api:8080"]
+
+  - job_name: payments-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["payments-api:8080"]
+
+  - job_name: donations-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["donations-api:8080"]

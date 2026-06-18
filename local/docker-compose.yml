@@ -1,0 +1,179 @@
+name: conexao-solidaria
+
+# ----------------------------------------------------------------------------
+# Ambiente local completo do Conexão Solidária.
+#
+# Sobe por padrão: SQL Server + Service Bus emulator (+ backing) + Azurite +
+# as 3 APIs (Users/Payments/Donations) + a NotificationFunction.
+# Com isso a SAGA roda fim-a-fim:
+#   doação (Donations) -> donation-requested -> Payments (mock) ->
+#   payment-result -> Donations (consolida) + NotificationFunction (notifica).
+#
+# Read store da DonationAPI: usa o fallback in-memory (Development). O emulador
+# Cosmos fica no profile opcional `cosmos` (ver local/README.md — usá-lo exige
+# cert-bypass no build da DonationAPI; o saga não depende dele).
+#
+# Observabilidade local (Prometheus + Grafana): profile `observability`.
+#
+# Uso:
+#   cp .env.example .env
+#   docker compose up -d --build
+# ----------------------------------------------------------------------------
+
+services:
+  # --------------------------------------------------------------------------
+  # Infraestrutura
+  # --------------------------------------------------------------------------
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: cs-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD}
+    ports:
+      - "1433:1433"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  servicebus-emulator:
+    image: mcr.microsoft.com/azure-messaging/servicebus-emulator:latest
+    container_name: cs-servicebus
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      ACCEPT_EULA: "Y"
+      SQL_SERVER: sqlserver
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD}
+    ports:
+      - "5672:5672"
+    volumes:
+      - ./servicebus/config.json:/ServiceBus_Emulator/ConfigFiles/Config.json:ro
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    container_name: cs-azurite
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002"
+
+  # Emulador Cosmos — OPCIONAL (profile `cosmos`). Por padrão a DonationAPI usa
+  # o read store in-memory. Ver nota de cert-bypass em local/README.md.
+  cosmos:
+    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview
+    container_name: cs-cosmos
+    profiles: ["cosmos"]
+    ports:
+      - "8081:8081"
+      - "10250-10255:10250-10255"
+    environment:
+      PROTOCOL: https
+
+  # --------------------------------------------------------------------------
+  # Microsserviços (.NET 8) — build a partir dos repos irmãos no workspace
+  # --------------------------------------------------------------------------
+  users-api:
+    build:
+      context: ../../hackaton-fiap-users
+      dockerfile: src/HackatonFiap.Users.API/Dockerfile
+    container_name: cs-users-api
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    ports:
+      - "5001:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=HackatonFiapUsersDb;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=true;"
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__Key: ${JWT_KEY}
+      Owner__Password: ${OWNER_PASSWORD}
+
+  payments-api:
+    build:
+      context: ../../hackaton-fiap-payments
+      dockerfile: Dockerfile
+    container_name: cs-payments-api
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      servicebus-emulator:
+        condition: service_started
+    ports:
+      - "5002:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=HackatonFiapPaymentsDb;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=true;"
+      ServiceBus__ConnectionString: "Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__Key: ${JWT_KEY}
+
+  donations-api:
+    build:
+      context: ../../hackaton-fiap-donations
+      dockerfile: Dockerfile
+    container_name: cs-donations-api
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      servicebus-emulator:
+        condition: service_started
+    ports:
+      - "5003:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=HackatonFiapDonationsDb;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=true;"
+      ServiceBus__ConnectionString: "Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__Key: ${JWT_KEY}
+      # Cosmos__ConnectionString intencionalmente ausente -> read store in-memory.
+      # Para usar o emulador Cosmos (profile `cosmos`), ver local/README.md.
+
+  notifications-func:
+    build:
+      context: ../../hackaton-fiap-notifications
+      dockerfile: src/HackatonFiap.Notifications/Dockerfile
+    container_name: cs-notifications-func
+    depends_on:
+      servicebus-emulator:
+        condition: service_started
+      azurite:
+        condition: service_started
+    environment:
+      FUNCTIONS_WORKER_RUNTIME: dotnet-isolated
+      AzureWebJobsStorage: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;"
+      SERVICEBUS_CONNECTION: "Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
+
+  # --------------------------------------------------------------------------
+  # Observabilidade local — profile `observability`
+  # --------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cs-prometheus
+    profiles: ["observability"]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cs-grafana
+    profiles: ["observability"]
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
