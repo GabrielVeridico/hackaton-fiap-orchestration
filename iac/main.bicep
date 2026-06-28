@@ -90,6 +90,18 @@ module servicebus 'modules/servicebus.bicep' = {
   }
 }
 
+module sql 'modules/sql.bicep' = {
+  scope: rg
+  name: 'sql'
+  params: {
+    location: location
+    suffix: suffix
+    adminLogin: sqlAdminLogin
+    adminPassword: sqlAdminPassword
+    devIpAddress: devIpAddress
+  }
+}
+
 output rgName string = rg.name
 output tenantId string = subscription().tenantId
 output acrLoginServer string = acr.outputs.loginServer
@@ -98,3 +110,5 @@ output aksKvIdentityName string = identity.outputs.name
 output keyVaultName string = keyvault.outputs.name
 output serviceBusNamespace string = servicebus.outputs.namespaceName
 output serviceBusAuthRule string = servicebus.outputs.authRuleName
+output sqlServerName string = sql.outputs.serverName
+output sqlServerFqdn string = sql.outputs.serverFqdn
