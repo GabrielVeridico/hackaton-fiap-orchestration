@@ -102,6 +102,15 @@ module sql 'modules/sql.bicep' = {
   }
 }
 
+module cosmos 'modules/cosmos.bicep' = {
+  scope: rg
+  name: 'cosmos'
+  params: {
+    location: location
+    suffix: suffix
+  }
+}
+
 output rgName string = rg.name
 output tenantId string = subscription().tenantId
 output acrLoginServer string = acr.outputs.loginServer
@@ -112,3 +121,4 @@ output serviceBusNamespace string = servicebus.outputs.namespaceName
 output serviceBusAuthRule string = servicebus.outputs.authRuleName
 output sqlServerName string = sql.outputs.serverName
 output sqlServerFqdn string = sql.outputs.serverFqdn
+output cosmosAccountName string = cosmos.outputs.accountName
