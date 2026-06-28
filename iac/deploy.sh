@@ -33,16 +33,16 @@ COSMOS_CONN=$(az cosmosdb keys list -g "$RG" -n "$COSMOS" --type connection-stri
 APPI_CONN=$(az monitor app-insights component show -g "$RG" -a appi-conexao-solidaria --query connectionString -o tsv)
 sqlconn() { echo "Server=tcp:$SQL_FQDN,1433;Database=$1;User ID=$SQL_LOGIN;Password=$SQL_PWD;Encrypt=true;TrustServerCertificate=false;"; }
 
-declare -A SECRETS=(
-  [Users-ConnectionString]="$(sqlconn HackatonFiapUsersDb)"
-  [Payments-ConnectionString]="$(sqlconn HackatonFiapPaymentsDb)"
-  [Donations-ConnectionString]="$(sqlconn HackatonFiapDonationsDb)"
-  [ServiceBus-ConnectionString]="$SB_CONN"
-  [Cosmos-ConnectionString]="$COSMOS_CONN"
-  [Jwt-Key]="$JWT_KEY"
-  [Owner-Password]="$OWNER_PWD"
-  [AppInsights-ConnectionString]="$APPI_CONN"
-)
+declare -A SECRETS
+SECRETS[Users-ConnectionString]="$(sqlconn HackatonFiapUsersDb)"
+SECRETS[Payments-ConnectionString]="$(sqlconn HackatonFiapPaymentsDb)"
+SECRETS[Donations-ConnectionString]="$(sqlconn HackatonFiapDonationsDb)"
+SECRETS[ServiceBus-ConnectionString]="$SB_CONN"
+SECRETS[Cosmos-ConnectionString]="$COSMOS_CONN"
+SECRETS[Jwt-Key]="$JWT_KEY"
+SECRETS[Owner-Password]="$OWNER_PWD"
+SECRETS[AppInsights-ConnectionString]="$APPI_CONN"
+
 for n in "${!SECRETS[@]}"; do az keyvault secret set --vault-name "$KV" --name "$n" --value "${SECRETS[$n]}" -o none && echo "  ok: $n"; done
 
 az functionapp config appsettings set -g "$RG" -n "$FUNC" --settings \
