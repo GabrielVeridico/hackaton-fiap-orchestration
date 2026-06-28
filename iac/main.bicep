@@ -81,9 +81,20 @@ module keyvault 'modules/keyvault.bicep' = {
   }
 }
 
+module servicebus 'modules/servicebus.bicep' = {
+  scope: rg
+  name: 'servicebus'
+  params: {
+    location: location
+    suffix: suffix
+  }
+}
+
 output rgName string = rg.name
 output tenantId string = subscription().tenantId
 output acrLoginServer string = acr.outputs.loginServer
 output aksKvIdentityClientId string = identity.outputs.clientId
 output aksKvIdentityName string = identity.outputs.name
 output keyVaultName string = keyvault.outputs.name
+output serviceBusNamespace string = servicebus.outputs.namespaceName
+output serviceBusAuthRule string = servicebus.outputs.authRuleName
