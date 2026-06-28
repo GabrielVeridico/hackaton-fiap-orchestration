@@ -56,3 +56,27 @@ deploy-payments:
 
 deploy-donations:
 	helm upgrade --install hackatonfiap-donations $(CHART) -f $(CHART)/values-donations.yaml -n $(NS)
+
+# ---- Azure IaC (Bicep) ----
+RG       := hackaton-fiap
+LOCATION := brazilsouth
+IAC      := iac
+
+.PHONY: iac-whatif iac-deploy iac-destroy aks-start aks-stop
+
+iac-whatif:
+	cd $(IAC) && az deployment sub what-if --location $(LOCATION) \
+	  --template-file main.bicep --parameters main.parameters.json \
+	  --parameters sqlAdminPassword=$$SQL_PWD deployerObjectId=$$(az ad signed-in-user show --query id -o tsv) budgetContactEmail=$$BUDGET_EMAIL
+
+iac-deploy:
+	cd $(IAC) && pwsh ./deploy.ps1 -BudgetEmail $$BUDGET_EMAIL
+
+iac-destroy:
+	az group delete --name $(RG) --yes --no-wait
+
+aks-start:
+	az aks start --resource-group $(RG) --name aks-conexao-solidaria
+
+aks-stop:
+	az aks stop --resource-group $(RG) --name aks-conexao-solidaria
