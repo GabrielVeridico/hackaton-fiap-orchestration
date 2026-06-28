@@ -1,0 +1,50 @@
+targetScope = 'subscription'
+
+@description('Região de todos os recursos')
+param location string = 'brazilsouth'
+
+@description('Nome do resource group único')
+param rgName string = 'hackaton-fiap'
+
+@description('Sufixo para nomes globalmente únicos (deixe o default)')
+param uniqueSuffix string = ''
+
+@description('Provisiona o AKS (custo dominante — só quando for usar)')
+param deployAks bool = false
+
+@description('Provisiona o APIM')
+param deployApim bool = false
+
+@description('Usa node pool Spot no AKS (apenas dev)')
+param useSpot bool = false
+
+@description('E-mail para alertas de budget')
+param budgetContactEmail string
+
+@description('Primeiro dia do mês para o budget (yyyy-MM-01)')
+param budgetStartDate string = utcNow('yyyy-MM-01')
+
+@description('Login admin do SQL Server')
+param sqlAdminLogin string = 'csadmin'
+
+@secure()
+@description('Senha admin do SQL Server (>=12 chars, complexa)')
+param sqlAdminPassword string
+
+@description('objectId de quem roda o deploy (preenchido pelo deploy.ps1)')
+param deployerObjectId string
+
+@description('IP do desenvolvedor para firewall do SQL (opcional)')
+param devIpAddress string = ''
+
+var suffix = empty(uniqueSuffix) ? take(uniqueString(subscription().id, rgName), 6) : uniqueSuffix
+
+resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
+  name: rgName
+  location: location
+}
+
+// ==== chamadas de módulo serão anexadas pelas próximas tasks ====
+
+output rgName string = rg.name
+output tenantId string = subscription().tenantId

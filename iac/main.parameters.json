@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": { "value": "brazilsouth" },
+    "rgName": { "value": "hackaton-fiap" },
+    "deployAks": { "value": false },
+    "deployApim": { "value": false },
+    "useSpot": { "value": false },
+    "budgetContactEmail": { "value": "gabriel.verissimo@esolution.com.br" },
+    "sqlAdminLogin": { "value": "csadmin" }
+  }
+}

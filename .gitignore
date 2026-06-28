@@ -11,3 +11,8 @@ helm/**/charts/
 .DS_Store
 Thumbs.db
 .superpowers/
+
+# IaC — artefatos e parâmetros locais com segredos
+iac/*.local.json
+iac/.azure/
+*.bicepparam.local
