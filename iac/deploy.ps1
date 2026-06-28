@@ -15,16 +15,45 @@ function Invoke-AzChecked {
   return $r
 }
 
+function New-StrongPassword([int]$Length = 20) {
+  # Explicit alphabet — excludes chars that break SQL connection strings or shells:
+  # no ; ' " ` = space
+  $upper   = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.ToCharArray()
+  $lower   = 'abcdefghijklmnopqrstuvwxyz'.ToCharArray()
+  $digits  = '0123456789'.ToCharArray()
+  $symbols = '!@#$%^*-_'.ToCharArray()
+  $all     = $upper + $lower + $digits + $symbols
+
+  # Guarantee at least one of each class
+  $pwd = [System.Collections.Generic.List[char]]::new()
+  $pwd.Add($upper[[System.Security.Cryptography.RandomNumberGenerator]::GetInt32($upper.Length)])
+  $pwd.Add($lower[[System.Security.Cryptography.RandomNumberGenerator]::GetInt32($lower.Length)])
+  $pwd.Add($digits[[System.Security.Cryptography.RandomNumberGenerator]::GetInt32($digits.Length)])
+  $pwd.Add($symbols[[System.Security.Cryptography.RandomNumberGenerator]::GetInt32($symbols.Length)])
+
+  for ($i = 4; $i -lt $Length; $i++) {
+    $pwd.Add($all[[System.Security.Cryptography.RandomNumberGenerator]::GetInt32($all.Length)])
+  }
+
+  # Fisher-Yates shuffle using CSPRNG
+  for ($i = $pwd.Count - 1; $i -gt 0; $i--) {
+    $j = [System.Security.Cryptography.RandomNumberGenerator]::GetInt32($i + 1)
+    $tmp = $pwd[$i]; $pwd[$i] = $pwd[$j]; $pwd[$j] = $tmp
+  }
+
+  return -join $pwd
+}
+
 # 1) Pré-requisitos e quota
 Write-Host '== Verificando login e quota ==' -ForegroundColor Cyan
 az account show -o none
 if ($LASTEXITCODE -ne 0) { throw 'az account show failed — execute az login first' }
 az vm list-usage --location $Location --query "[?contains(localName,'Standard B') || contains(localName,'Total Regional')].{name:localName,used:currentValue,limit:limit}" -o table
 
-# 2) Segredos gerados localmente (nunca commitados)
-$jwtKey = [Convert]::ToBase64String([byte[]](1..48 | ForEach-Object { Get-Random -Max 256 }))
-$ownerPwd = ([Convert]::ToBase64String([byte[]](1..18 | ForEach-Object { Get-Random -Max 256 })) -replace '[^A-Za-z0-9]','') + 'Aa1!'
-$sqlPwd = ([Convert]::ToBase64String([byte[]](1..18 | ForEach-Object { Get-Random -Max 256 })) -replace '[^A-Za-z0-9]','') + 'Aa1!'
+# 2) Segredos gerados localmente (nunca commitados) — usando CSPRNG
+$b = [byte[]]::new(48); [System.Security.Cryptography.RandomNumberGenerator]::Fill($b); $jwtKey = [Convert]::ToBase64String($b)
+$ownerPwd = New-StrongPassword -Length 24
+$sqlPwd   = New-StrongPassword -Length 24
 $deployerObjectId = Invoke-AzChecked { az ad signed-in-user show --query id -o tsv } 'az ad signed-in-user show'
 
 # 3) Deploy do Bicep (subscription-scope)
@@ -77,14 +106,29 @@ az functionapp config appsettings set -g $RgName -n $funcApp --settings `
   "SERVICEBUS_CONNECTION=$sbConn" "APPLICATIONINSIGHTS_CONNECTION_STRING=$appiConn" -o none
 if ($LASTEXITCODE -ne 0) { throw 'az functionapp config appsettings set failed' }
 
-# 7) Bloco de secrets do GitHub (colar nos repos)
-Write-Host "`n== GitHub Actions secrets (colar nos repos) ==" -ForegroundColor Yellow
+# 7) Bloco de secrets do GitHub — sensíveis gravados em arquivo local, NÃO no stdout
 $acrName = ($deploy.acrLoginServer.value -split '\.')[0]
 $acrPwd = Invoke-AzChecked { az acr credential show -n $acrName --query "passwords[0].value" -o tsv } 'az acr credential show'
+
+$secretsFile = Join-Path $PSScriptRoot 'github-secrets.local'
+$secretsContent = @"
+# GitHub Actions secrets — NÃO commite este arquivo; apague após colar nos GitHub secrets.
+RESOURCE_GROUP=$RgName
+ACR_NAME=$acrName
+ACR_USERNAME=$acrName
+ACR_PASSWORD=$acrPwd
+AKS_CLUSTER_NAME=aks-conexao-solidaria
+FUNCTION_APP_NAME=$funcApp
+"@
+Set-Content -Path $secretsFile -Value $secretsContent -Encoding UTF8
+# Restringir ACL ao usuário corrente (remove herança, concede somente o usuário atual)
+icacls $secretsFile /inheritance:r /grant:r "$($env:USERNAME):F" | Out-Null
+
+Write-Host "`n== GitHub Actions secrets ==" -ForegroundColor Yellow
 Write-Host "RESOURCE_GROUP=$RgName"
 Write-Host "ACR_NAME=$acrName"
 Write-Host "ACR_USERNAME=$acrName"
-Write-Host "ACR_PASSWORD=$acrPwd"
 Write-Host "AKS_CLUSTER_NAME=aks-conexao-solidaria"
 Write-Host "FUNCTION_APP_NAME=$funcApp"
-Write-Host "`nGuarde com seguranca. Para AZURE_CREDENTIALS/KUBE_CONFIG veja o README (fallback Free Trial)."
+Write-Host "`nSecrets sensíveis (ACR_PASSWORD) gravados em iac/github-secrets.local — NÃO commite; apague após colar nos GitHub secrets." -ForegroundColor Red
+Write-Host "Para AZURE_CREDENTIALS/KUBE_CONFIG veja o README (fallback Free Trial)."

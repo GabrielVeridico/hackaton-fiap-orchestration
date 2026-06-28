@@ -16,3 +16,4 @@ Thumbs.db
 iac/*.local.json
 iac/.azure/
 *.bicepparam.local
+iac/github-secrets.local
