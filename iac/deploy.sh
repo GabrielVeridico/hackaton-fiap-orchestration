@@ -12,7 +12,7 @@ az vm list-usage --location "$LOCATION" -o table | grep -Ei 'Standard B|Total Re
 
 # CSPRNG — explicit alphabet (no ; ' " ` = space) to guarantee complexity & fixed length
 # Generates a strong password of $1 chars from an alphabet that covers all 4 Azure SQL classes.
-# Strategy: map each openssl byte (mod alphabet_len) then enforce at least one char per class.
+# Strategy: rejection sampling to avoid modulo bias, then enforce at least one char per class.
 gen_password() {
   local length="${1:-24}"
   local upper='ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -22,21 +22,86 @@ gen_password() {
   local alphabet="${upper}${lower}${digits}${symbols}"
   local alen=${#alphabet}
 
-  # Draw (length + 32) bytes as headroom, map each to alphabet, take first $length
+  # Rejection sampling: map bytes to alphabet without bias
+  # limit = 256 - (256 % alen) ensures uniform distribution
+  local limit=$(( 256 - (256 % alen) ))
+
+  # Helper to convert hex byte string to decimal
+  byte_to_dec() {
+    local hex="$1"
+    printf '%d\n' "0x${hex}"
+  }
+
+  # Draw (length + 32) bytes as headroom, map each to alphabet with rejection sampling, take first $length
   local raw
   raw=$(openssl rand -hex $(( (length + 32) * 2 )) | fold -w2 | while read -r h; do
-    printf '%d\n' "0x${h}"
-  done | while read -r n; do
+    local n
+    n=$(byte_to_dec "$h")
+    # Rejection sampling: discard bytes >= limit
+    while (( n >= limit )); do
+      h=$(openssl rand -hex 1)
+      n=$(byte_to_dec "$h")
+    done
     idx=$(( n % alen ))
     printf '%s' "${alphabet:$idx:1}"
   done | head -c "$length")
 
   # Guarantee at least one char from each class — replace positions 0-3 with forced chars
+  # Use rejection sampling for per-class indices as well
   local u l d s rest
-  u="${upper:$(( $(openssl rand -hex 1 | printf '%d' "0x$(cat)") % ${#upper} )):1}"
-  l="${lower:$(( $(openssl rand -hex 1 | printf '%d' "0x$(cat)") % ${#lower} )):1}"
-  d="${digits:$(( $(openssl rand -hex 1 | printf '%d' "0x$(cat)") % ${#digits} )):1}"
-  s="${symbols:$(( $(openssl rand -hex 1 | printf '%d' "0x$(cat)") % ${#symbols} )):1}"
+
+  # Upper: rejection sampling over uppercase alphabet
+  local limit_u=$(( 256 - (256 % ${#upper}) ))
+  while true; do
+    local hex_u
+    hex_u=$(openssl rand -hex 1)
+    local dec_u
+    dec_u=$(byte_to_dec "$hex_u")
+    if (( dec_u < limit_u )); then
+      u="${upper:$(( dec_u % ${#upper} )):1}"
+      break
+    fi
+  done
+
+  # Lower: rejection sampling over lowercase alphabet
+  local limit_l=$(( 256 - (256 % ${#lower}) ))
+  while true; do
+    local hex_l
+    hex_l=$(openssl rand -hex 1)
+    local dec_l
+    dec_l=$(byte_to_dec "$hex_l")
+    if (( dec_l < limit_l )); then
+      l="${lower:$(( dec_l % ${#lower} )):1}"
+      break
+    fi
+  done
+
+  # Digits: rejection sampling over digits alphabet
+  local limit_d=$(( 256 - (256 % ${#digits}) ))
+  while true; do
+    local hex_d
+    hex_d=$(openssl rand -hex 1)
+    local dec_d
+    dec_d=$(byte_to_dec "$hex_d")
+    if (( dec_d < limit_d )); then
+      d="${digits:$(( dec_d % ${#digits} )):1}"
+      break
+    fi
+  done
+
+  # Symbols: rejection sampling over symbols alphabet
+  local limit_s=$(( 256 - (256 % ${#symbols}) ))
+  while true; do
+    local hex_s
+    hex_s=$(openssl rand -hex 1)
+    local dec_s
+    dec_s=$(byte_to_dec "$hex_s")
+    if (( dec_s < limit_s )); then
+      s="${symbols:$(( dec_s % ${#symbols} )):1}"
+      break
+    fi
+  done
+
   rest="${raw:4}"
   # Concatenate guaranteed chars + remaining, then shuffle with openssl-seeded sort
   local combined="${u}${l}${d}${s}${rest}"
