@@ -62,6 +62,16 @@ module acr 'modules/acr.bicep' = {
   }
 }
 
+module identity 'modules/identity.bicep' = {
+  scope: rg
+  name: 'identity'
+  params: {
+    location: location
+  }
+}
+
 output rgName string = rg.name
 output tenantId string = subscription().tenantId
 output acrLoginServer string = acr.outputs.loginServer
+output aksKvIdentityClientId string = identity.outputs.clientId
+output aksKvIdentityName string = identity.outputs.name
