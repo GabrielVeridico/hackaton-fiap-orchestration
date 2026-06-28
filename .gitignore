@@ -10,3 +10,4 @@ helm/**/charts/
 # Sistema
 .DS_Store
 Thumbs.db
+.superpowers/
