@@ -111,6 +111,14 @@ module cosmos 'modules/cosmos.bicep' = {
   }
 }
 
+module budget 'modules/budget.bicep' = {
+  name: 'budget'
+  params: {
+    contactEmail: budgetContactEmail
+    startDate: budgetStartDate
+  }
+}
+
 output rgName string = rg.name
 output tenantId string = subscription().tenantId
 output acrLoginServer string = acr.outputs.loginServer
