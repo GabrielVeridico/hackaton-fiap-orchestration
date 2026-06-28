@@ -142,6 +142,16 @@ module aks 'modules/aks.bicep' = if (deployAks) {
   }
 }
 
+module apim 'modules/apim.bicep' = if (deployApim) {
+  scope: rg
+  name: 'apim'
+  params: {
+    location: location
+    suffix: suffix
+    publisherEmail: budgetContactEmail
+  }
+}
+
 output rgName string = rg.name
 output tenantId string = subscription().tenantId
 output acrLoginServer string = acr.outputs.loginServer
@@ -155,3 +165,4 @@ output sqlServerFqdn string = sql.outputs.serverFqdn
 output cosmosAccountName string = cosmos.outputs.accountName
 output aksClusterName string = deployAks ? aks.outputs.clusterName : ''
 output functionAppName string = function.outputs.functionAppName
+output apimName string = deployApim ? apim.outputs.apimName : ''
