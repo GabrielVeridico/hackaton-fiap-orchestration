@@ -18,6 +18,29 @@ var serviceAccounts = [
 ]
 var acrPull = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
 
+var systemPool = {
+  name: 'system'
+  mode: 'System'
+  count: useSpot ? 1 : 2
+  vmSize: 'Standard_B2ms'
+  osType: 'Linux'
+  osDiskSizeGB: 32
+  type: 'VirtualMachineScaleSets'
+}
+
+var spotPool = {
+  name: 'spot'
+  mode: 'User'
+  count: 1
+  vmSize: 'Standard_B2ms'
+  osType: 'Linux'
+  osDiskSizeGB: 32
+  type: 'VirtualMachineScaleSets'
+  scaleSetPriority: 'Spot'
+  scaleSetEvictionPolicy: 'Delete'
+  spotMaxPrice: json('-1')
+}
+
 resource aks 'Microsoft.ContainerService/managedClusters@2024-05-01' = {
   name: 'aks-conexao-solidaria'
   location: location
@@ -36,20 +59,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2024-05-01' = {
         config: { enableSecretRotation: 'true' }
       }
     }
-    agentPoolProfiles: [
-      {
-        name: 'system'
-        mode: 'System'
-        count: 2
-        vmSize: 'Standard_B2ms'
-        osType: 'Linux'
-        osDiskSizeGB: 32
-        type: 'VirtualMachineScaleSets'
-        scaleSetPriority: useSpot ? 'Spot' : 'Regular'
-        scaleSetEvictionPolicy: useSpot ? 'Delete' : null
-        spotMaxPrice: useSpot ? json('-1') : null
-      }
-    ]
+    agentPoolProfiles: useSpot ? concat([systemPool], [spotPool]) : [systemPool]
     networkProfile: {
       networkPlugin: 'kubenet'
       loadBalancerSku: 'standard'
@@ -80,7 +90,7 @@ resource fic 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentity
   name: 'fic-${sa}'
   properties: {
     issuer: aks.properties.oidcIssuerProfile.issuerURL
-    subject: 'system:serviceaccount:conexao-solidaria:${sa}'
+    subject: 'system:serviceaccount:conexao-solidaria:sa-${sa}'
     audiences: [ 'api://AzureADTokenExchange' ]
   }
 }]
