@@ -111,6 +111,16 @@ module cosmos 'modules/cosmos.bicep' = {
   }
 }
 
+module function 'modules/function.bicep' = {
+  scope: rg
+  name: 'function'
+  params: {
+    location: location
+    suffix: suffix
+    keyVaultName: keyvault.outputs.name
+  }
+}
+
 module budget 'modules/budget.bicep' = {
   name: 'budget'
   params: {
@@ -144,3 +154,4 @@ output sqlServerName string = sql.outputs.serverName
 output sqlServerFqdn string = sql.outputs.serverFqdn
 output cosmosAccountName string = cosmos.outputs.accountName
 output aksClusterName string = deployAks ? aks.outputs.clusterName : ''
+output functionAppName string = function.outputs.functionAppName
