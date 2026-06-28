@@ -44,7 +44,14 @@ resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   location: location
 }
 
-// ==== chamadas de módulo serão anexadas pelas próximas tasks ====
+module monitoring 'modules/monitoring.bicep' = {
+  scope: rg
+  name: 'monitoring'
+  params: {
+    location: location
+    suffix: suffix
+  }
+}
 
 output rgName string = rg.name
 output tenantId string = subscription().tenantId
