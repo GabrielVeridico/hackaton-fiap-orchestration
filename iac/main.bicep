@@ -53,5 +53,15 @@ module monitoring 'modules/monitoring.bicep' = {
   }
 }
 
+module acr 'modules/acr.bicep' = {
+  scope: rg
+  name: 'acr'
+  params: {
+    location: location
+    suffix: suffix
+  }
+}
+
 output rgName string = rg.name
 output tenantId string = subscription().tenantId
+output acrLoginServer string = acr.outputs.loginServer
