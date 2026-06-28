@@ -70,8 +70,20 @@ module identity 'modules/identity.bicep' = {
   }
 }
 
+module keyvault 'modules/keyvault.bicep' = {
+  scope: rg
+  name: 'keyvault'
+  params: {
+    location: location
+    suffix: suffix
+    aksIdentityPrincipalId: identity.outputs.principalId
+    deployerObjectId: deployerObjectId
+  }
+}
+
 output rgName string = rg.name
 output tenantId string = subscription().tenantId
 output acrLoginServer string = acr.outputs.loginServer
 output aksKvIdentityClientId string = identity.outputs.clientId
 output aksKvIdentityName string = identity.outputs.name
+output keyVaultName string = keyvault.outputs.name
