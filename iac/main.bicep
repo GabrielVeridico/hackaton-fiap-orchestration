@@ -119,6 +119,19 @@ module budget 'modules/budget.bicep' = {
   }
 }
 
+module aks 'modules/aks.bicep' = if (deployAks) {
+  scope: rg
+  name: 'aks'
+  params: {
+    location: location
+    useSpot: useSpot
+    acrName: acr.outputs.name
+    kvIdentityId: identity.outputs.id
+    kvIdentityName: identity.outputs.name
+    logAnalyticsWorkspaceId: monitoring.outputs.workspaceId
+  }
+}
+
 output rgName string = rg.name
 output tenantId string = subscription().tenantId
 output acrLoginServer string = acr.outputs.loginServer
@@ -130,3 +143,4 @@ output serviceBusAuthRule string = servicebus.outputs.authRuleName
 output sqlServerName string = sql.outputs.serverName
 output sqlServerFqdn string = sql.outputs.serverFqdn
 output cosmosAccountName string = cosmos.outputs.accountName
+output aksClusterName string = deployAks ? aks.outputs.clusterName : ''
