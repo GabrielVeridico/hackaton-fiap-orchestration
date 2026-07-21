@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hackatonfiap-users-config
+  namespace: conexao-solidaria
+  labels:
+    app.kubernetes.io/name: hackatonfiap-users
+    app.kubernetes.io/part-of: conexao-solidaria
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  Jwt__Issuer: "conexaosolidaria.local"
+  Jwt__Audience: "conexaosolidaria.clients"
+  Owner__Email: "owner@conexaosolidaria.org"
+  Owner__Document: "52998224725"
+  Owner__Name: "Owner"

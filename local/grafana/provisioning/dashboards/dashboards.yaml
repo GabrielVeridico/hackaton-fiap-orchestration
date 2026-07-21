@@ -1,0 +1,16 @@
+apiVersion: 1
+
+# Provider de dashboards: carrega automaticamente todos os .json desta pasta
+# ao subir o Grafana (profile `observability`). Assim o dashboard da aplicação
+# aparece sem import manual.
+providers:
+  - name: conexao-solidaria
+    orgId: 1
+    folder: "Conexão Solidária"
+    type: file
+    disableDeletion: false
+    editable: true
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: false

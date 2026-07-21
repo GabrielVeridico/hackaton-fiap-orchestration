@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hackatonfiap-donations-config
+  namespace: conexao-solidaria
+  labels:
+    app.kubernetes.io/name: hackatonfiap-donations
+    app.kubernetes.io/part-of: conexao-solidaria
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  Jwt__Issuer: "conexaosolidaria.local"
+  Jwt__Audience: "conexaosolidaria.clients"
+  ServiceBus__RequestTopic: "donation-requested"
+  ServiceBus__ResultTopic: "payment-result"
+  ServiceBus__ResultSubscription: "donations"
+  Cosmos__Database: "HackatonFiapDonations"
+  Cosmos__Container: "campaigns"

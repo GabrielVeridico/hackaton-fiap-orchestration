@@ -4,6 +4,11 @@ nameOverride: hackatonfiap-users
 image:
   repository: hackatonfiap-users
 
+# RT4: Prometheus (kube-prometheus-stack) faz scrape via ServiceMonitor.
+metrics:
+  serviceMonitor:
+    enabled: true
+
 config:
   Jwt__Issuer: conexaosolidaria.local
   Jwt__Audience: conexaosolidaria.clients

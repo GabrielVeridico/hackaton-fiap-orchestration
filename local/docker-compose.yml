@@ -149,8 +149,38 @@ services:
         condition: service_started
     environment:
       FUNCTIONS_WORKER_RUNTIME: dotnet-isolated
+      AZURE_FUNCTIONS_ENVIRONMENT: Development
       AzureWebJobsStorage: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;"
       SERVICEBUS_CONNECTION: "Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
+
+  # --------------------------------------------------------------------------
+  # Front-end (Next.js 16 / BFF) — build a partir do repo irmão hackaton-fiap-front
+  # O browser fala só com o BFF (mesma origem); o servidor Next chama as APIs
+  # pelos hostnames internos do compose na porta 8080 (não as portas host 500x).
+  # --------------------------------------------------------------------------
+  front:
+    build:
+      context: ../../hackaton-fiap-front
+      dockerfile: Dockerfile
+    container_name: cs-front
+    depends_on:
+      users-api:
+        condition: service_started
+      donations-api:
+        condition: service_started
+      payments-api:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      UPSTREAM_MODE: services
+      USERS_API_URL: "http://users-api:8080"
+      DONATIONS_API_URL: "http://donations-api:8080"
+      PAYMENTS_API_URL: "http://payments-api:8080"
+      MOCK_DONOR_CAMPAIGNS: "false"
+      MOCK_MY_DONATIONS: "false"
+      MOCK_DONATIONS: "false"
 
   # --------------------------------------------------------------------------
   # Observabilidade local — profile `observability`
@@ -170,8 +200,9 @@ services:
     profiles: ["observability"]
     depends_on:
       - prometheus
+    # Porta host 3001 para não colidir com o serviço `front` (que usa 3000).
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: admin
       GF_AUTH_ANONYMOUS_ENABLED: "true"
