@@ -89,6 +89,10 @@ resource mi 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existi
   name: kvIdentityName
 }
 
+// @batchSize(1): federated credentials da MESMA identidade NÃO podem ser criadas em
+// paralelo (o serviço serializa; em paralelo só uma "vence" e as demais falham com
+// AADSTS700213 no runtime). Força criação sequencial.
+@batchSize(1)
 resource fic 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2023-01-31' = [for sa in serviceAccounts: {
   parent: mi
   name: 'fic-${sa}'
