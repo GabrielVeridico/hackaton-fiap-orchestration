@@ -39,16 +39,17 @@ resource allowDev 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = if 
   properties: { startIpAddress: devIpAddress, endIpAddress: devIpAddress }
 }
 
+// Tier fixo Basic (~US$5/mês por banco): custo previsível e baixo, SEM o risco do
+// serverless nunca pausar — o probe /ready consulta o SQL a cada 10s, então o banco
+// nunca ficaria ocioso 60 min e cobraria o piso de compute 24/7. Basic = 5 DTU, máx.
+// 2 GB, o que atende de sobra o MVP/testes (um banco por serviço — database-per-service).
 resource dbs 'Microsoft.Sql/servers/databases@2023-08-01-preview' = [for db in databaseNames: {
   parent: sqlServer
   name: db
   location: location
-  sku: { name: 'GP_S_Gen5_1', tier: 'GeneralPurpose', family: 'Gen5', capacity: 1 }
+  sku: { name: 'Basic', tier: 'Basic' }
   properties: {
-    autoPauseDelay: 60
-    minCapacity: json('0.5')
     maxSizeBytes: 2147483648
-    zoneRedundant: false
   }
 }]
 
