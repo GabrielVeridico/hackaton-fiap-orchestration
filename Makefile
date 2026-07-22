@@ -62,7 +62,8 @@ RG       := hackaton-fiap
 LOCATION := brazilsouth
 IAC      := iac
 
-.PHONY: iac-whatif iac-deploy iac-destroy aks-start aks-stop
+.PHONY: iac-whatif iac-deploy iac-destroy aks-up aks-down aks-start aks-stop
+AKS := aks-conexao-solidaria
 
 iac-whatif:
 	cd $(IAC) && az deployment sub what-if --location $(LOCATION) \
@@ -75,8 +76,18 @@ iac-deploy:
 iac-destroy:
 	az group delete --name $(RG) --yes --no-wait
 
+# AKS efêmero: criar/destruir só o cluster (baseline permanece de pé).
+aks-up:
+	cd $(IAC) && az deployment group create --resource-group $(RG) \
+	  --name aks-standalone --template-file aks.bicep
+
+# Destrói o cluster + Load Balancer + IP + discos (zera 100% do custo do AKS).
+aks-down:
+	az aks delete --resource-group $(RG) --name $(AKS) --yes
+
+# Pausa/religa (mais rápido que up/down, mas mantém LB+IP+discos cobrando ~US$1/dia).
 aks-start:
-	az aks start --resource-group $(RG) --name aks-conexao-solidaria
+	az aks start --resource-group $(RG) --name $(AKS)
 
 aks-stop:
-	az aks stop --resource-group $(RG) --name aks-conexao-solidaria
+	az aks stop --resource-group $(RG) --name $(AKS)

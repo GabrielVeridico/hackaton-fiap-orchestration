@@ -7,7 +7,7 @@ Provisiona todos os recursos no RG único **`hackaton-fiap`** (Brazil South), so
 - `az` CLI logado: `az login` (e `az account set -s <subscription>` se houver mais de uma).
 - Bicep: `az bicep install`.
 - PowerShell 7 (`pwsh`) para o `deploy.ps1`, ou bash + `jq` + `openssl` para o `deploy.sh`.
-- **Verificar quota ANTES do AKS:** `az vm list-usage --location brazilsouth -o table` — precisa de ~4 vCPU livres p/ 2× B2ms. Se faltar, use `eastus2` ou `deployAks=false`.
+- **Verificar quota ANTES do AKS:** `az vm list-usage --location brazilsouth -o table` — 1× B2ms precisa de ~2 vCPU livres. Se faltar, use `eastus2`.
 
 ## Ordem e flags
 
@@ -18,12 +18,24 @@ cd iac
 pwsh ./deploy.ps1 -BudgetEmail gabriel.verissimo@esolution.com.br
 ```
 
-Ligar AKS/APIM quando for usar — edite `main.parameters.json` (`deployAks=true`, `deployApim=true`) e rode de novo. Para dev barato, `useSpot=true`.
+O `deploy.ps1` deixa `deployAks=false` (baseline barato). O **AKS é efêmero** — crie e destrua só o cluster, sem tocar no baseline:
+
+```bash
+make aks-up      # cria SÓ o AKS (~5-10 min), referenciando ACR + identidade já existentes
+make deploy-users && make deploy-payments && make deploy-donations   # (re)aplica os apps
+# ... grava a demo ...
+make aks-down    # destrói cluster + LB + IP + discos  ->  custo do AKS = US$0
+```
+
+`iac/aks.bicep` é um template standalone (RG-scoped) que reaproveita `modules/aks.bicep`.
+Não use `useSpot=true` (B2ms não é elegível a Spot → o deploy falha). APIM é opcional
+(`deployApim=true` no `main.parameters.json`) e não é necessário para a demo.
 
 ## Custo
 
 - Baseline ~US$16–20/mês. AKS 1× B2ms + LB **24/7 ~US$120/mês** (a evitar; `systemNodeCount=1` por padrão).
-- **Desligue o AKS fora das demos:** `make aks-stop` (religar: `make aks-start`). Zera nós + Load Balancer.
+- **Fora das demos, derrube o AKS:** `make aks-down` (remove cluster + LB + IP + discos → AKS = US$0). Recriar: `make aks-up`.
+- Alternativa rápida: `make aks-stop`/`aks-start` desaloca só os nós; **LB + IP + discos continuam** cobrando ~US$1/dia.
 - SQL em tier **Basic** (~US$5/mês por banco, fixo — sem risco do serverless não pausar); Cosmos/Function/APIM são free/consumption.
 
 ## Secrets
