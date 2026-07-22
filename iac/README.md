@@ -22,7 +22,7 @@ Ligar AKS/APIM quando for usar — edite `main.parameters.json` (`deployAks=true
 
 ## Custo
 
-- Baseline ~US$16–20/mês. AKS 2× B2ms + LB **24/7 ~US$140–180/mês** (a evitar).
+- Baseline ~US$16–20/mês. AKS 1× B2ms + LB **24/7 ~US$120/mês** (a evitar; `systemNodeCount=1` por padrão).
 - **Desligue o AKS fora das demos:** `make aks-stop` (religar: `make aks-start`). Zera nós + Load Balancer.
 - SQL em tier **Basic** (~US$5/mês por banco, fixo — sem risco do serverless não pausar); Cosmos/Function/APIM são free/consumption.
 

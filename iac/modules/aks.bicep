@@ -10,6 +10,8 @@ param kvIdentityId string
 param kvIdentityName string
 @description('Workspace do Log Analytics (não usado p/ Container Insights — reservado)')
 param logAnalyticsWorkspaceId string = ''
+@description('Nós do system pool — 1 basta para a demo (metade do custo); aumente para HA')
+param systemNodeCount int = 1
 
 var serviceAccounts = [
   'hackatonfiap-users'
@@ -21,7 +23,7 @@ var acrPull = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
 var systemPool = {
   name: 'system'
   mode: 'System'
-  count: useSpot ? 1 : 2
+  count: systemNodeCount
   vmSize: 'Standard_B2ms'
   osType: 'Linux'
   osDiskSizeGB: 32
