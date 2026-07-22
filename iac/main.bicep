@@ -15,6 +15,9 @@ param deployAks bool = false
 @description('Provisiona o APIM')
 param deployApim bool = false
 
+@description('Provisiona a Azure Function de notificações (Consumption). Free Trial pode ter quota 0 de Microsoft.Web em algumas regiões.')
+param deployFunction bool = true
+
 @description('Usa node pool Spot no AKS (apenas dev)')
 param useSpot bool = false
 
@@ -111,7 +114,7 @@ module cosmos 'modules/cosmos.bicep' = {
   }
 }
 
-module function 'modules/function.bicep' = {
+module function 'modules/function.bicep' = if (deployFunction) {
   scope: rg
   name: 'function'
   params: {
@@ -164,5 +167,5 @@ output sqlServerName string = sql.outputs.serverName
 output sqlServerFqdn string = sql.outputs.serverFqdn
 output cosmosAccountName string = cosmos.outputs.accountName
 output aksClusterName string = deployAks ? aks.outputs.clusterName : ''
-output functionAppName string = function.outputs.functionAppName
+output functionAppName string = deployFunction ? function.outputs.functionAppName : ''
 output apimName string = deployApim ? apim.outputs.apimName : ''

@@ -12,6 +12,8 @@ param kvIdentityName string
 param logAnalyticsWorkspaceId string = ''
 @description('Nós do system pool — 1 basta para a demo (metade do custo); aumente para HA')
 param systemNodeCount int = 1
+@description('SKU da VM dos nós. B-series NÃO é permitida nesta Free Trial; Standard_D2s_v6 (2 vCPU/8GB) é permitida e tem quota.')
+param nodeVmSize string = 'Standard_D2s_v6'
 
 var serviceAccounts = [
   'hackatonfiap-users'
@@ -24,7 +26,7 @@ var systemPool = {
   name: 'system'
   mode: 'System'
   count: systemNodeCount
-  vmSize: 'Standard_B2ms'
+  vmSize: nodeVmSize
   osType: 'Linux'
   osDiskSizeGB: 32
   type: 'VirtualMachineScaleSets'
@@ -34,7 +36,7 @@ var spotPool = {
   name: 'spot'
   mode: 'User'
   count: 1
-  vmSize: 'Standard_B2ms'
+  vmSize: nodeVmSize
   osType: 'Linux'
   osDiskSizeGB: 32
   type: 'VirtualMachineScaleSets'

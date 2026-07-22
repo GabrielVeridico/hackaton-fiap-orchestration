@@ -7,7 +7,7 @@ Provisiona todos os recursos no RG único **`hackaton-fiap`** (Brazil South), so
 - `az` CLI logado: `az login` (e `az account set -s <subscription>` se houver mais de uma).
 - Bicep: `az bicep install`.
 - PowerShell 7 (`pwsh`) para o `deploy.ps1`, ou bash + `jq` + `openssl` para o `deploy.sh`.
-- **Verificar quota ANTES do AKS:** `az vm list-usage --location brazilsouth -o table` — 1× B2ms precisa de ~2 vCPU livres. Se faltar, use `eastus2`.
+- **Verificar quota ANTES do AKS:** `az vm list-usage --location brazilsouth -o table` — 1× D2s_v6 precisa de ~2 vCPU livres (família Dsv6). Nota: em Free Trial a série **B não é permitida** para AKS; por isso o nó é **`Standard_D2s_v6`** (param `nodeVmSize`).
 
 ## Ordem e flags
 
@@ -33,7 +33,8 @@ Não use `useSpot=true` (B2ms não é elegível a Spot → o deploy falha). APIM
 
 ## Custo
 
-- Baseline ~US$16–20/mês. AKS 1× B2ms + LB **24/7 ~US$120/mês** (a evitar; `systemNodeCount=1` por padrão).
+- Baseline ~US$16–20/mês. AKS 1× D2s_v6 + LB **24/7 ~US$110–130/mês** (a evitar; `systemNodeCount=1` por padrão).
+- Notificações: **Azure Function em Flex Consumption (FC1)** — serverless/scale-to-zero, ~US$0 na demo (o Consumption Y1 é bloqueado pela quota `Microsoft.Web=0` da Free Trial).
 - **Fora das demos, derrube o AKS:** `make aks-down` (remove cluster + LB + IP + discos → AKS = US$0). Recriar: `make aks-up`.
 - Alternativa rápida: `make aks-stop`/`aks-start` desaloca só os nós; **LB + IP + discos continuam** cobrando ~US$1/dia.
 - SQL em tier **Basic** (~US$5/mês por banco, fixo — sem risco do serverless não pausar); Cosmos/Function/APIM são free/consumption.
