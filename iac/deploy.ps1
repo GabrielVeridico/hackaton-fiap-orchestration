@@ -50,10 +50,13 @@ az account show -o none
 if ($LASTEXITCODE -ne 0) { throw 'az account show failed — execute az login first' }
 az vm list-usage --location $Location --query "[?contains(localName,'Standard B') || contains(localName,'Total Regional')].{name:localName,used:currentValue,limit:limit}" -o table
 
-# 2) Segredos gerados localmente (nunca commitados) — usando CSPRNG
+# 2) Segredos. A Jwt-Key continua sendo gerada por CSPRNG (precisa de >=32 bytes).
 $b = [byte[]]::new(48); [System.Security.Cryptography.RandomNumberGenerator]::Fill($b); $jwtKey = [Convert]::ToBase64String($b)
-$ownerPwd = New-StrongPassword -Length 24
-$sqlPwd   = New-StrongPassword -Length 24
+# ATENCAO: senha FIXA e FRACA, so para AMBIENTE DE TESTE descartavel (Free Trial),
+# demonstrada de PROPOSITO no video. NUNCA reutilizar em ambiente real.
+# Para producao, voltar a: New-StrongPassword -Length 24
+$ownerPwd = 'SenhaSuperForte!123'
+$sqlPwd   = 'SenhaSuperForte!123'
 $deployerObjectId = Invoke-AzChecked { az ad signed-in-user show --query id -o tsv } 'az ad signed-in-user show'
 
 # 3) Deploy do Bicep (subscription-scope)

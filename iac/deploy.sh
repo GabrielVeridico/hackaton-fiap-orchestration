@@ -113,9 +113,12 @@ gen_password() {
   printf '%s' "$shuffled"
 }
 
-JWT_KEY="$(openssl rand -base64 48)"
-OWNER_PWD="$(gen_password 24)"
-SQL_PWD="$(gen_password 24)"
+JWT_KEY="$(openssl rand -base64 48)"   # Jwt-Key permanece aleatoria (precisa de >=32 bytes)
+# ATENCAO: senha FIXA e FRACA, so para AMBIENTE DE TESTE descartavel (Free Trial),
+# demonstrada de PROPOSITO no video. NUNCA reutilizar em ambiente real.
+# Para producao, voltar a: gen_password 24
+OWNER_PWD='SenhaSuperForte!123'
+SQL_PWD='SenhaSuperForte!123'
 DEPLOYER_OID="$(az ad signed-in-user show --query id -o tsv)"
 
 echo "== deployment =="
