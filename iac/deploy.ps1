@@ -48,6 +48,8 @@ function New-StrongPassword([int]$Length = 20) {
 Write-Host '== Verificando login e quota ==' -ForegroundColor Cyan
 az account show -o none
 if ($LASTEXITCODE -ne 0) { throw 'az account show failed — execute az login first' }
+# Auto-instala extensões do az (ex.: application-insights) sem prompt — evita EOF em sessão não-interativa
+az config set extension.use_dynamic_install=yes_without_prompt -o none
 az vm list-usage --location $Location --query "[?contains(localName,'Standard B') || contains(localName,'Total Regional')].{name:localName,used:currentValue,limit:limit}" -o table
 
 # 2) Segredos. A Jwt-Key continua sendo gerada por CSPRNG (precisa de >=32 bytes).
