@@ -62,8 +62,10 @@ RG       := hackaton-fiap
 LOCATION := brazilsouth
 IAC      := iac
 
-.PHONY: iac-whatif iac-deploy iac-destroy aks-up aks-down aks-start aks-stop
+.PHONY: iac-whatif iac-deploy iac-destroy aks-up aks-down aks-start aks-stop front-up front-down
 AKS := aks-conexao-solidaria
+CAE := cae-conexao-solidaria
+CA  := ca-conexao-front
 
 iac-whatif:
 	cd $(IAC) && az deployment sub what-if --location $(LOCATION) \
@@ -91,3 +93,12 @@ aks-start:
 
 aks-stop:
 	az aks stop --resource-group $(RG) --name $(AKS)
+
+# Front-end no Azure Container Apps: build+push da imagem + deploy (deriva a URL do APIM).
+front-up:
+	cd $(IAC) && pwsh ./deploy-frontend.ps1
+
+# Derruba a Container App + o Environment (o baseline permanece de pé).
+front-down:
+	az containerapp delete --resource-group $(RG) --name $(CA) --yes
+	az containerapp env delete --resource-group $(RG) --name $(CAE) --yes

@@ -18,6 +18,9 @@ param deployApim bool = false
 @description('Provisiona a Azure Function de notificações (Consumption). Free Trial pode ter quota 0 de Microsoft.Web em algumas regiões.')
 param deployFunction bool = true
 
+@description('Provisiona o front-end (Next.js + BFF) no Azure Container Apps')
+param deployFrontend bool = false
+
 @description('URL base pública da UserAPI para o backend do APIM (ex.: http://<ip>:8080/api)')
 param usersBackendUrl string = ''
 @description('URL base pública da DonationAPI para o backend do APIM (ex.: http://<ip>:8080/api)')
@@ -162,6 +165,21 @@ module apim 'modules/apim.bicep' = if (deployApim) {
   }
 }
 
+// Front-end no Azure Container Apps (standalone tambem disponivel em frontend.bicep).
+// aponta o BFF para a RAIZ do gateway APIM (sem /api — o /api vem do path).
+module frontend 'frontend.bicep' = if (deployFrontend) {
+  scope: rg
+  name: 'frontend'
+  params: {
+    location: location
+    acrName: acr.outputs.name
+    apimBaseUrl: 'https://apim-conexao-solidaria-${suffix}.azure-api.net'
+  }
+  dependsOn: [
+    monitoring
+  ]
+}
+
 output rgName string = rg.name
 output tenantId string = subscription().tenantId
 output acrLoginServer string = acr.outputs.loginServer
@@ -176,3 +194,4 @@ output cosmosAccountName string = cosmos.outputs.accountName
 output aksClusterName string = deployAks ? aks.outputs.clusterName : ''
 output functionAppName string = deployFunction ? function.outputs.functionAppName : ''
 output apimName string = deployApim ? apim.outputs.apimName : ''
+output frontUrl string = deployFrontend ? frontend.outputs.frontUrl : ''

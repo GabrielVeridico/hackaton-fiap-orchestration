@@ -1,6 +1,6 @@
 # Subir o Conexão Solidária na Azure — passo a passo (runbook)
 
-Sequência **validada end-to-end** numa conta **Free Trial** (RG único `hackaton-fiap`, Brazil South, teto US$200). Cobre baseline + Function + AKS + observabilidade + apps (Helm) + APIM + validação + pausa. Comandos a partir de `hackaton-fiap-orchestration/`.
+Sequência **validada end-to-end** numa conta **Free Trial** (RG único `hackaton-fiap`, Brazil South, teto US$200). Cobre baseline + Function + AKS + observabilidade + apps (Helm) + APIM + **front (Container Apps)** + validação + pausa. Comandos a partir de `hackaton-fiap-orchestration/`.
 
 > **Gotchas da Free Trial já resolvidos aqui** (não são bugs do projeto): série B bloqueada p/ AKS → **D2s_v6**; Functions Consumption Y1 bloqueado → **Flex Consumption**; **ACR Tasks bloqueado** → build local + push; federated credentials criadas em sequência (`@batchSize(1)`); teto **4 vCPU** → AKS de 1–2 nós.
 
@@ -74,6 +74,15 @@ az deployment group create -g hackaton-fiap --name apim-standalone --template-fi
   usersBackendUrl="http://$UIP:8080/api" donationsBackendUrl="http://$DIP:8080/api"   # Consumption; ~5-15 min
 ```
 Gateway: `https://apim-conexao-solidaria-<suffix>.azure-api.net`. Rotas `/api/auth|users` → UserAPI; `/api/campaigns|donations|transparency` → DonationAPI (a policy roteia por `context.Request.OriginalUrl.Path`). **A PaymentAPI NÃO fica atrás do APIM** (é query admin-only, não é rota pública, e a Free Trial limita a **3 IPs públicos** por região — já usados por users, donations e o LB de egress do AKS). **NOTA:** o SKU **Consumption não suporta as policies rate-limit/rate-limit-by-key** — o gateway faz roteamento (e normalização), sem rate-limit.
+
+## 7b. Front-end (Azure Container Apps)
+```bash
+cd iac
+pwsh ./deploy-frontend.ps1        # build+push da imagem do front + deploy; deriva a URL do APIM do RG
+```
+Cria o Container Apps Environment `cae-conexao-solidaria` + a app `ca-conexao-front` (Next.js 16 + BFF), ingress HTTPS externo na porta **3000**, com `UPSTREAM_MODE=apim` e `APIM_BASE_URL=https://apim-conexao-solidaria-<suffix>.azure-api.net` (**raiz, sem `/api`** — o `/api` já vem do path que o BFF emite). Requer **Docker Desktop** (ACR Tasks é bloqueado na Free Trial → build local). O script imprime a **URL pública** do front (`https://<fqdn>`). Scale-to-zero por default (`minReplicas=0`, ~US$0 ocioso); para a demo ao vivo, `pwsh ./deploy-frontend.ps1 -MinReplicas 1` evita cold start. Derrubar: `make front-down`.
+
+> O front **sobe mesmo com o AKS pausado**, mas login/campanhas/transparência só respondem com **APIM + AKS no ar** (`az aks start`). O browser fala só com o BFF (mesma origem → sem CORS).
 
 ## 8. Validação E2E
 ```bash
