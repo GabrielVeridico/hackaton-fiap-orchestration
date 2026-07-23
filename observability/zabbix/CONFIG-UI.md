@@ -1,6 +1,8 @@
 # Zabbix — configuração fina na UI (Conexão Solidária)
 
-Os manifestos (`zabbix-server.yaml`, `zabbix-agent-daemonset.yaml`) sobem o **server + web + postgres + agent (DaemonSet)**. A coleta de host (CPU/mem/disco dos nós) já funciona via o agent. Os passos abaixo são a configuração **manual na UI** que fecha o RT4 (disponibilidade + scrape de `/metrics` + alertas). Não dá para automatizar daqui.
+Os manifestos (`zabbix-server.yaml`, `zabbix-agent-daemonset.yaml`) sobem o **server + web + postgres + agent (DaemonSet)**. A coleta de host (CPU/mem/disco dos nós) já funciona via o agent. Os passos abaixo são a configuração que fecha o RT4 (disponibilidade + scrape de `/metrics` + alertas).
+
+> ⚡ **Atalho automatizado (recomendado):** em vez de clicar tudo na UI, rode **`pwsh ./configure-zabbix.ps1`** (com o `port-forward svc/zabbix-web 8888:80` ativo). Ele cria, via **API do Zabbix**, o grupo `Conexao Solidaria` + 3 hosts (`svc-users/payments/donations`), cada um com **web scenario** (`/health`+`/ready` → 200), **item HTTP `app.metrics`** (scrape `/metrics`) e **trigger de indisponibilidade** (High). É **idempotente** — como o Postgres do Zabbix é `emptyDir`, **rode de novo após cada `az aks stop/start`** para reconstruir tudo em segundos. Os passos manuais abaixo continuam válidos como referência do que é criado.
 
 ## 0. Acessar a UI
 ```bash

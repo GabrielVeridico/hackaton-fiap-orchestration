@@ -48,7 +48,7 @@ kubectl -n observability port-forward svc/zabbix-web 8888:80
   ```bash
   kubectl -n observability get secret zabbix-db -o jsonpath="{.data.POSTGRES_PASSWORD}" | base64 -d ; echo
   ```
-- **Configuração da UI** (hosts, templates, web scenarios de `/health`/`/ready`, itens de `/metrics`, triggers de indisponibilidade/CPU/memória/5xx): seguir o passo-a-passo em [CONFIG-UI.md](zabbix/CONFIG-UI.md). **Refazer após cada religada do AKS** (Postgres em `emptyDir`).
+- **Configuração** (hosts, web scenarios de `/health`/`/ready`, itens de `/metrics`, triggers): rode **`pwsh observability/zabbix/configure-zabbix.ps1`** (com o port-forward ativo) — cria tudo via API, idempotente. **Refazer após cada religada do AKS** (Postgres em `emptyDir`). Detalhes/manual em [CONFIG-UI.md](zabbix/CONFIG-UI.md).
 
 ---
 
