@@ -15,6 +15,9 @@ imagePullSecrets:
 
 service:
   port: 8080
+  type: ClusterIP
+  # anotações do Service (ex.: IP público estático do LB do AKS por serviço)
+  annotations: {}
 
 env:
   ASPNETCORE_ENVIRONMENT: Production

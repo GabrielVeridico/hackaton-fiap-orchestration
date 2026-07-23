@@ -4,6 +4,12 @@ nameOverride: hackatonfiap-donations
 image:
   repository: hackatonfiap-donations
 
+# Exposto via LoadBalancer com IP público estático (reservado no MC_ RG) p/ o APIM rotear.
+service:
+  type: LoadBalancer
+  annotations:
+    service.beta.kubernetes.io/azure-pip-name: pip-donations
+
 # RT4: Prometheus (kube-prometheus-stack) faz scrape via ServiceMonitor.
 metrics:
   serviceMonitor:

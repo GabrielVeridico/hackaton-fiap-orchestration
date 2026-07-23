@@ -18,6 +18,11 @@ param deployApim bool = false
 @description('Provisiona a Azure Function de notificações (Consumption). Free Trial pode ter quota 0 de Microsoft.Web em algumas regiões.')
 param deployFunction bool = true
 
+@description('URL base pública da UserAPI para o backend do APIM (ex.: http://<ip>:8080/api)')
+param usersBackendUrl string = ''
+@description('URL base pública da DonationAPI para o backend do APIM (ex.: http://<ip>:8080/api)')
+param donationsBackendUrl string = ''
+
 @description('Usa node pool Spot no AKS (apenas dev)')
 param useSpot bool = false
 
@@ -152,6 +157,8 @@ module apim 'modules/apim.bicep' = if (deployApim) {
     location: location
     suffix: suffix
     publisherEmail: budgetContactEmail
+    usersBackendUrl: usersBackendUrl
+    donationsBackendUrl: donationsBackendUrl
   }
 }
 

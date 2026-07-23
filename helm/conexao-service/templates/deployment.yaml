@@ -6,7 +6,9 @@ metadata:
   labels:
     {{- include "conexao-service.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicaCount }}
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}   # com HPA ligado, o replicas é do HPA (evita conflito de apply)
+  {{- end }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "conexao-service.name" . }}
