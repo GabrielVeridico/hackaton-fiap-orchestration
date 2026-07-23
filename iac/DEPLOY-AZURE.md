@@ -90,7 +90,14 @@ Cria o Container Apps Environment `cae-conexao-solidaria` + a app `ca-conexao-fr
 kubectl port-forward -n conexao-solidaria svc/hackatonfiap-payments 5002:8080 &
 pwsh ./iac/test-all.ps1 -ApiBase https://apim-conexao-solidaria-<suffix>.azure-api.net -PaymentsBase http://localhost:5002
 ```
-Cobre (28 checagens) auth, RBAC, campanhas+regras, doação aprovada/recusada (saga com polling), transparência e payments — a maioria via APIM. Observabilidade: `kubectl -n observability port-forward svc/kube-prometheus-stack-grafana 3000:80` (dashboard "Conexão Solidária"); `svc/zabbix-web 8888:80`.
+Cobre (28 checagens) auth, RBAC, campanhas+regras, doação aprovada/recusada (saga com polling), transparência e payments — a maioria via APIM. Para validar E2E **pelo front** (via BFF, com cookies): `pwsh ./iac/test-front.ps1` (15 checagens).
+
+**Observabilidade — acesso aos painéis** (Grafana/Prometheus/Zabbix, todos ClusterIP → só `port-forward`): guia completo com credenciais em [`observability/ACESSO.md`](../observability/ACESSO.md). Resumo:
+```bash
+kubectl -n observability port-forward svc/kube-prometheus-stack-grafana 3000:80   # http://localhost:3000 (admin / ler do secret kube-prometheus-stack-grafana)
+kubectl -n observability port-forward svc/kube-prometheus-stack-prometheus 9090:9090  # http://localhost:9090
+kubectl -n observability port-forward svc/zabbix-web 8888:80                       # http://localhost:8888 (Admin/zabbix, trocar no 1o acesso)
+```
 
 ## 9. Custo e ciclo de vida
 | Estado | Custo |
