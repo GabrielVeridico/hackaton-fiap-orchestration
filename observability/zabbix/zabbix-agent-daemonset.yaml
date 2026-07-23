@@ -52,7 +52,10 @@ spec:
           securityContext:
             privileged: false
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
+            # A imagem zabbix-agent2 edita seus configs em /etc/zabbix e escreve
+            # log em /tmp no startup; readOnlyRootFilesystem=true causa CrashLoop
+            # ("Read-only file system"). Mantido non-root + drop ALL caps.
+            readOnlyRootFilesystem: false
             runAsNonRoot: true
             capabilities:
               drop: ["ALL"]
