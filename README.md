@@ -58,7 +58,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 APIs em `:5001` (users), `:5002` (payments), `:5003` (donations). Observabilidade local opcional:
-`docker compose --profile observability up -d` (Prometheus `:9090`, Grafana `:3000`).
+`docker compose --profile observability up -d` (Prometheus `:9090`, Grafana `:3001` — 3000 é o front).
 
 ## Deploy no AKS (Helm)
 
