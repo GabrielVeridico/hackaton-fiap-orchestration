@@ -1,0 +1,37 @@
+name: CI
+# Valida a IaC sem credenciais Azure (RT5: CI verde sozinha).
+# Deploy é feito por scripts (deploy.ps1 / deploy-apps.ps1 / deploy-frontend.ps1), não por Actions.
+on:
+  push:
+    branches: [master, feat/azure-iac-provisioning]
+  pull_request:
+    branches: [master, feat/azure-iac-provisioning]
+
+jobs:
+  validate:
+    name: Bicep + Helm + k8s
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bicep build (compila os templates)
+        run: |
+          az bicep install
+          az bicep build --file iac/main.bicep
+          az bicep build --file iac/aks.bicep
+          az bicep build --file iac/frontend.bicep
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Helm lint + template (3 serviços)
+        run: |
+          for svc in users payments donations; do
+            helm lint helm/conexao-service -f helm/conexao-service/values-$svc.yaml
+            helm template $svc helm/conexao-service -f helm/conexao-service/values-$svc.yaml > /dev/null
+          done
+
+      - name: Validate k8s manifests (kubeconform)
+        run: |
+          curl -sL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
+          ./kubeconform -strict -summary -ignore-missing-schemas k8s/
